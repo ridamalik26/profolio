@@ -16,9 +16,15 @@ dependencies:
   # Firebase
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.0
+  firebase_storage: ^12.3.0
 
   # State management
   flutter_riverpod: ^2.6.1
+
+  # Media
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
 
   # Fonts
   google_fonts: ^6.2.1

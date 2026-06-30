@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -10,7 +12,14 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final authState = ref.watch(authNotifierProvider);
+    final profileAsync = ref.watch(profileStreamProvider);
     final theme = Theme.of(context);
+
+    final displayName = profileAsync.value?.fullName.isNotEmpty == true
+        ? profileAsync.value!.fullName
+        : user?.displayName;
+
+    final firstName = displayName?.split(' ').first;
 
     return Scaffold(
       appBar: AppBar(
@@ -40,18 +49,27 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          PopupMenuButton<String>(
-            icon: CircleAvatar(
+          // Profile avatar → opens profile screen
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+            child: CircleAvatar(
               backgroundColor: AppColors.bronze.withValues(alpha: 0.15),
               radius: 18,
               child: Text(
-                _getInitial(user?.displayName),
+                _getInitial(displayName),
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: AppColors.bronze,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
+          ),
+          const SizedBox(width: 12),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: AppColors.navy, size: 20),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -70,7 +88,7 @@ class HomeScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      user?.displayName ?? 'User',
+                      displayName ?? 'User',
                       style: theme.textTheme.titleMedium,
                     ),
                     Text(
@@ -87,10 +105,8 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     Icon(Icons.logout, size: 18, color: AppColors.error),
                     SizedBox(width: 10),
-                    Text(
-                      'Sign out',
-                      style: TextStyle(color: AppColors.error),
-                    ),
+                    Text('Sign out',
+                        style: TextStyle(color: AppColors.error)),
                   ],
                 ),
               ),
@@ -100,15 +116,19 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: authState.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.bronze),
+              ),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildWelcomeBanner(theme, user?.firstName),
-                  const SizedBox(height: 32),
-                  _buildQuickActions(theme),
+                  _buildWelcomeBanner(theme, firstName),
+                  const SizedBox(height: 28),
+                  _buildQuickActions(context, theme),
                 ],
               ),
             ),
@@ -131,7 +151,7 @@ class HomeScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Welcome${firstName != null ? ', $firstName' : ''}!',
+            firstName != null ? 'Welcome, $firstName!' : 'Welcome!',
             style: theme.textTheme.headlineMedium?.copyWith(
               color: AppColors.white,
             ),
@@ -160,12 +180,35 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions(ThemeData theme) {
+  Widget _buildQuickActions(BuildContext context, ThemeData theme) {
     final actions = [
-      (Icons.add_circle_outline, 'Add Project', 'Showcase your work'),
-      (Icons.person_outline, 'Edit Profile', 'Update your info'),
-      (Icons.link, 'Share Portfolio', 'Share your link'),
-      (Icons.bar_chart, 'Analytics', 'Track views'),
+      (
+        Icons.person_outline,
+        'My Profile',
+        'View & edit profile',
+        () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+      ),
+      (
+        Icons.add_circle_outline,
+        'Add Project',
+        'Showcase your work',
+        () {},
+      ),
+      (
+        Icons.link,
+        'Share Portfolio',
+        'Share your link',
+        () {},
+      ),
+      (
+        Icons.bar_chart,
+        'Analytics',
+        'Track views',
+        () {},
+      ),
     ];
 
     return Column(
@@ -181,7 +224,14 @@ class HomeScreen extends ConsumerWidget {
           mainAxisSpacing: 12,
           childAspectRatio: 1.3,
           children: actions
-              .map((a) => _ActionCard(icon: a.$1, title: a.$2, subtitle: a.$3))
+              .map(
+                (a) => _ActionCard(
+                  icon: a.$1,
+                  title: a.$2,
+                  subtitle: a.$3,
+                  onTap: a.$4,
+                ),
+              )
               .toList(),
         ),
       ],
@@ -199,8 +249,7 @@ class HomeScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Sign out',
-            style: Theme.of(ctx).textTheme.titleLarge),
+        title: Text('Sign out', style: Theme.of(ctx).textTheme.titleLarge),
         content: Text(
           'Are you sure you want to sign out?',
           style: Theme.of(ctx).textTheme.bodyMedium,
@@ -215,7 +264,8 @@ class HomeScreen extends ConsumerWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             child: const Text('Sign out'),
           ),
@@ -230,11 +280,13 @@ class _ActionCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback onTap;
 
   const _ActionCard({
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.onTap,
   });
 
   @override
@@ -245,7 +297,7 @@ class _ActionCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {},
+        onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
