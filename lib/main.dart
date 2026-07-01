@@ -1,7 +1,7 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
@@ -17,11 +17,11 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize Firebase using native config files:
-  //   Android: android/app/google-services.json
-  //   iOS:     ios/Runner/GoogleService-Info.plist
-  // Run: flutterfire configure  (adds these + firebase_options.dart)
-  await Firebase.initializeApp();
+  await Supabase.initialize(
+    url: 'https://lidbibzpjukzxzmuhomc.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpZGJpYnpwanVrenh6bXVob21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDI1MzQsImV4cCI6MjA5ODQxODUzNH0.n9woxZwIv1A5CfQmulj_owkVqXNb9Y3O352QrE6j5dc',
+  );
 
   runApp(const ProviderScope(child: ProFolioApp()));
 }
@@ -40,7 +40,7 @@ class ProFolioApp extends ConsumerWidget {
   }
 }
 
-/// Listens to Firebase auth state and routes accordingly.
+/// Listens to Supabase auth state and routes accordingly.
 class _AuthGate extends ConsumerWidget {
   const _AuthGate();
 

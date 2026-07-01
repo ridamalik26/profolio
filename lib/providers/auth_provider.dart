@@ -1,13 +1,15 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show User;
+import '../models/profile_model.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 
-// ── Service provider ──────────────────────────────────────────────────────────
+// ── Service providers ─────────────────────────────────────────────────────────
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 
-// ── Reactive auth state (stream from Firebase) ────────────────────────────────
+// ── Reactive auth state (stream from Supabase) ────────────────────────────────
 
 final authStateChangesProvider = StreamProvider<User?>((ref) {
   return ref.watch(authServiceProvider).authStateChanges;
@@ -51,9 +53,11 @@ class AuthState {
 // ── Auth notifier ─────────────────────────────────────────────────────────────
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._authService) : super(const AuthState());
+  AuthNotifier(this._authService, this._profileService)
+      : super(const AuthState());
 
   final AuthService _authService;
+  final ProfileService _profileService;
 
   Future<bool> signIn({
     required String email,
@@ -80,11 +84,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
     try {
-      await _authService.createUserWithEmailAndPassword(
+      final user = await _authService.createUserWithEmailAndPassword(
         email: email,
         password: password,
         displayName: displayName,
       );
+
+      // Eagerly create a minimal Supabase profile row so the stream
+      // never returns null for a freshly-registered user.
+      try {
+        await _profileService.saveProfile(
+          ProfileModel(
+            uid: user.uid,
+            fullName: displayName.trim(),
+            email: email.trim(),
+          ),
+        );
+      } catch (_) {
+        // Non-fatal: user is still registered; they can complete profile later.
+      }
+
       state = const AuthState();
       return true;
     } catch (e) {
@@ -118,16 +137,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  void clearError() {
-    state = state.copyWith(clearError: true);
-  }
-
-  void clearSuccess() {
-    state = state.copyWith(clearSuccess: true);
-  }
+  void clearError() => state = state.copyWith(clearError: true);
+  void clearSuccess() => state = state.copyWith(clearSuccess: true);
 }
 
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(authServiceProvider));
+  return AuthNotifier(
+    ref.watch(authServiceProvider),
+    ref.watch(_profileServiceForAuthProvider),
+  );
 });
+
+// Separate provider so auth doesn't import the public profileServiceProvider
+// (avoiding circular imports since profile_provider imports auth_provider).
+final _profileServiceForAuthProvider =
+    Provider<ProfileService>((_) => ProfileService());

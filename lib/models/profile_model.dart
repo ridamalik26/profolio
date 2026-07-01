@@ -1,7 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'certification_model.dart';
 import 'education_model.dart';
 import 'experience_model.dart';
-import 'certification_model.dart';
+import 'resume_model.dart';
 
 class ProfileModel {
   final String uid;
@@ -19,6 +19,9 @@ class ProfileModel {
   final List<String> languages;
   final List<CertificationModel> certifications;
 
+  // Resume metadata (managed separately by ProfileService)
+  final ResumeModel? resume;
+
   const ProfileModel({
     required this.uid,
     required this.fullName,
@@ -34,50 +37,59 @@ class ProfileModel {
     this.skills = const [],
     this.languages = const [],
     this.certifications = const [],
+    this.resume,
   });
 
   factory ProfileModel.empty({required String uid, required String email}) {
     return ProfileModel(uid: uid, fullName: '', email: email);
   }
 
-  factory ProfileModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> snap,
-  ) {
-    final d = snap.data()!;
+  /// [dateOfBirth] is stored as an ISO "yyyy-MM-dd" string (Postgres `date`
+  /// column); this renders it as "dd/MM/yyyy" for display.
+  String? get formattedDateOfBirth {
+    final dob = dateOfBirth;
+    if (dob == null || dob.isEmpty) return null;
+    final parts = dob.split('-');
+    if (parts.length != 3) return dob;
+    return '${parts[2]}/${parts[1]}/${parts[0]}';
+  }
+
+  factory ProfileModel.fromMap(Map<String, dynamic> d) {
     return ProfileModel(
-      uid: snap.id,
-      fullName: d['fullName'] as String? ?? '',
+      uid: d['id'] as String,
+      fullName: d['full_name'] as String? ?? '',
       email: d['email'] as String? ?? '',
-      phoneNumber: d['phoneNumber'] as String?,
-      dateOfBirth: d['dateOfBirth'] as String?,
+      phoneNumber: d['phone'] as String?,
+      dateOfBirth: d['date_of_birth'] as String?,
       address: d['address'] as String?,
-      photoURL: d['photoURL'] as String?,
-      portfolioURL: d['portfolioURL'] as String?,
-      linkedinURL: d['linkedinURL'] as String?,
+      photoURL: d['avatar_url'] as String?,
+      portfolioURL: d['portfolio_url'] as String?,
+      linkedinURL: d['linkedin_url'] as String?,
       education: _parseList(d['education'], EducationModel.fromMap),
       experience: _parseList(d['experience'], ExperienceModel.fromMap),
       certifications: _parseList(d['certifications'], CertificationModel.fromMap),
       skills: _parseStringList(d['skills']),
       languages: _parseStringList(d['languages']),
+      resume: d['resume_url'] != null ? ResumeModel.fromMap(d) : null,
     );
   }
 
-  Map<String, dynamic> toFirestore() => {
-        'uid': uid,
-        'fullName': fullName,
+  Map<String, dynamic> toMap() => {
+        'id': uid,
+        'full_name': fullName,
         'email': email,
-        if (phoneNumber != null) 'phoneNumber': phoneNumber,
-        if (dateOfBirth != null) 'dateOfBirth': dateOfBirth,
-        if (address != null) 'address': address,
-        if (photoURL != null) 'photoURL': photoURL,
-        if (portfolioURL != null) 'portfolioURL': portfolioURL,
-        if (linkedinURL != null) 'linkedinURL': linkedinURL,
+        'phone': phoneNumber,
+        'date_of_birth': dateOfBirth,
+        'address': address,
+        'avatar_url': photoURL,
+        'portfolio_url': portfolioURL,
+        'linkedin_url': linkedinURL,
         'education': education.map((e) => e.toMap()).toList(),
         'experience': experience.map((e) => e.toMap()).toList(),
         'certifications': certifications.map((c) => c.toMap()).toList(),
         'skills': skills,
         'languages': languages,
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
 
   ProfileModel copyWith({
@@ -95,7 +107,9 @@ class ProfileModel {
     List<String>? skills,
     List<String>? languages,
     List<CertificationModel>? certifications,
+    ResumeModel? resume,
     bool clearPhotoURL = false,
+    bool clearResume = false,
   }) {
     return ProfileModel(
       uid: uid ?? this.uid,
@@ -112,6 +126,7 @@ class ProfileModel {
       skills: skills ?? this.skills,
       languages: languages ?? this.languages,
       certifications: certifications ?? this.certifications,
+      resume: clearResume ? null : (resume ?? this.resume),
     );
   }
 

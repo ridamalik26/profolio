@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UserModel {
   final String uid;
@@ -15,13 +15,14 @@ class UserModel {
     this.emailVerified = false,
   });
 
-  factory UserModel.fromFirebaseUser(User user) {
+  factory UserModel.fromSupabaseUser(User user) {
+    final metadata = user.userMetadata ?? {};
     return UserModel(
-      uid: user.uid,
+      uid: user.id,
       email: user.email ?? '',
-      displayName: user.displayName,
-      photoURL: user.photoURL,
-      emailVerified: user.emailVerified,
+      displayName: metadata['display_name'] as String?,
+      photoURL: metadata['avatar_url'] as String?,
+      emailVerified: user.emailConfirmedAt != null,
     );
   }
 

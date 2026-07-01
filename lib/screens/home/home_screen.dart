@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../profile/profile_screen.dart';
+import '../resume/resume_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -12,7 +13,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final authState = ref.watch(authNotifierProvider);
-    final profileAsync = ref.watch(profileStreamProvider);
+    final profileAsync = ref.watch(profileProvider);
     final theme = Theme.of(context);
 
     final displayName = profileAsync.value?.fullName.isNotEmpty == true
@@ -192,10 +193,13 @@ class HomeScreen extends ConsumerWidget {
             ),
       ),
       (
-        Icons.add_circle_outline,
-        'Add Project',
-        'Showcase your work',
-        () {},
+        Icons.description_outlined,
+        'My Resume',
+        'Upload & manage',
+        () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ResumeScreen()),
+            ),
       ),
       (
         Icons.link,

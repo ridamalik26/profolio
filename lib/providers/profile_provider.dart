@@ -12,12 +12,12 @@ import 'auth_provider.dart';
 
 final profileServiceProvider = Provider<ProfileService>((_) => ProfileService());
 
-// ── Live profile stream ───────────────────────────────────────────────────────
+// ── Profile fetch ─────────────────────────────────────────────────────────────
 
-final profileStreamProvider = StreamProvider.autoDispose<ProfileModel?>((ref) {
-  final uid = ref.watch(authStateChangesProvider).value?.uid;
-  if (uid == null) return Stream.value(null);
-  return ref.watch(profileServiceProvider).profileStream(uid);
+final profileProvider = FutureProvider.autoDispose<ProfileModel?>((ref) {
+  final uid = ref.watch(authStateChangesProvider).value?.id;
+  if (uid == null) return null;
+  return ref.watch(profileServiceProvider).getProfile(uid);
 });
 
 // ── Edit state ────────────────────────────────────────────────────────────────
@@ -247,6 +247,7 @@ class ProfileEditNotifier extends StateNotifier<ProfileEditState> {
 }
 
 final profileEditProvider =
-    StateNotifierProvider<ProfileEditNotifier, ProfileEditState>((ref) {
+    StateNotifierProvider.autoDispose<ProfileEditNotifier, ProfileEditState>(
+        (ref) {
   return ProfileEditNotifier(ref.watch(profileServiceProvider));
 });
