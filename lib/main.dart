@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -11,6 +12,8 @@ import 'screens/home/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: '.env');
+
   // Lock to portrait orientation
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -18,9 +21,8 @@ void main() async {
   ]);
 
   await Supabase.initialize(
-    url: 'https://lidbibzpjukzxzmuhomc.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpZGJpYnpwanVrenh6bXVob21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDI1MzQsImV4cCI6MjA5ODQxODUzNH0.n9woxZwIv1A5CfQmulj_owkVqXNb9Y3O352QrE6j5dc',
+    url: dotenv.get('SUPABASE_URL'),
+    anonKey: dotenv.get('SUPABASE_ANON_KEY'),
   );
 
   runApp(const ProviderScope(child: ProFolioApp()));

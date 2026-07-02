@@ -28,6 +28,10 @@ dependencies:
   # Fonts
   google_fonts: ^6.2.1
 
+  # Env / APIs
+  flutter_dotenv: ^6.0.1
+  google_generative_ai: ^0.4.7
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -35,3 +39,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - .env

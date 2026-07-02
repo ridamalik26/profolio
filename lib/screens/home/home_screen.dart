@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../jobs/jobs_screen.dart';
 import '../profile/profile_screen.dart';
 import '../resume/resume_screen.dart';
+import '../tracking/application_tracking_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -202,16 +204,22 @@ class HomeScreen extends ConsumerWidget {
             ),
       ),
       (
-        Icons.link,
-        'Share Portfolio',
-        'Share your link',
-        () {},
+        Icons.work_outline,
+        'Find Jobs',
+        'AI-matched listings',
+        () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const JobsScreen()),
+            ),
       ),
       (
-        Icons.bar_chart,
-        'Analytics',
-        'Track views',
-        () {},
+        Icons.checklist_outlined,
+        'My Applications',
+        'Track your progress',
+        () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ApplicationTrackingScreen()),
+            ),
       ),
     ];
 
