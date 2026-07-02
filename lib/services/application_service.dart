@@ -40,8 +40,10 @@ class ApplicationService {
       await _client
           .from(_applicationsTable)
           .upsert(application.toInsertMap(userId: uid), onConflict: 'user_id,job_id');
+    } on PostgrestException catch (e) {
+      throw AuthException('Failed to submit application: ${e.message}');
     } catch (e) {
-      throw const AuthException('Failed to submit application. Please try again.');
+      throw AuthException('Failed to submit application: $e');
     }
   }
 
@@ -83,8 +85,10 @@ class ApplicationService {
       await _client
           .from(_savedJobsTable)
           .upsert(job.toInsertMap(userId: uid), onConflict: 'user_id,job_id');
+    } on PostgrestException catch (e) {
+      throw AuthException('Failed to save job: ${e.message}');
     } catch (e) {
-      throw const AuthException('Failed to save job. Please try again.');
+      throw AuthException('Failed to save job: $e');
     }
   }
 

@@ -179,7 +179,7 @@ class _JobsTabView extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () => ref.invalidate(jobsForTabProvider(tab)),
+                onPressed: () => ref.invalidate(jobsRawProvider),
                 child: const Text('Retry'),
               ),
             ],
@@ -208,7 +208,7 @@ class _JobsTabView extends ConsumerWidget {
         }
         return RefreshIndicator(
           color: AppColors.bronze,
-          onRefresh: () async => ref.invalidate(jobsForTabProvider(tab)),
+          onRefresh: () async => ref.invalidate(jobsRawProvider),
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: jobs.length,

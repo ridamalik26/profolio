@@ -93,34 +93,63 @@ class JobFiltersNotifier extends StateNotifier<JobFilters> {
 final jobFiltersProvider =
     StateNotifierProvider<JobFiltersNotifier, JobFilters>((_) => JobFiltersNotifier());
 
-// ── Jobs for a given tab ─────────────────────────────────────────────────────
+// ── Raw job pool ─────────────────────────────────────────────────────────────
+//
+// Fetched once per session (not autoDispose, so it survives navigating away
+// from and back to the jobs screen) and cached in memory. Tab switches never
+// trigger a new Gemini call — they only filter/sort this list locally. A new
+// Gemini call only happens when the search query or filter sheet changes
+// (jobFiltersProvider), or when the user pulls to refresh
+// (ref.invalidate(jobsRawProvider)).
 
-final jobsForTabProvider =
-    FutureProvider.family.autoDispose<List<JobModel>, JobTab>((ref, tab) async {
+final jobsRawProvider = FutureProvider<List<JobModel>>((ref) async {
   final filters = ref.watch(jobFiltersProvider);
   final service = ref.watch(geminiJobServiceProvider);
   final profile = await ref.watch(profileProvider.future);
 
-  final jobs = await service.generateJobs(
+  return service.generateJobs(
     profile: profile,
-    tabContext: tab.label,
+    tabContext: 'All Jobs',
     searchQuery: filters.searchQuery,
     category: filters.category,
     experienceLevel: filters.experienceLevel,
     minSalary: filters.minSalary,
     maxSalary: filters.maxSalary,
-    remoteOnly: tab == JobTab.remote,
-    employmentType: _employmentTypeFor(tab),
-    preferRecent: tab == JobTab.latest,
+    count: 30,
   );
-
-  if (tab == JobTab.recommended) {
-    jobs.sort((a, b) => (b.matchScore ?? 0).compareTo(a.matchScore ?? 0));
-  } else {
-    jobs.sort((a, b) => (b.postedAt ?? DateTime(0)).compareTo(a.postedAt ?? DateTime(0)));
-  }
-  return jobs;
 });
+
+// ── Jobs for a given tab (local filter/sort over the cached raw pool) ────────
+
+final jobsForTabProvider =
+    Provider.family.autoDispose<AsyncValue<List<JobModel>>, JobTab>((ref, tab) {
+  final rawAsync = ref.watch(jobsRawProvider);
+
+  return rawAsync.whenData((rawJobs) {
+    final jobs = rawJobs.where((job) => _matchesTab(job, tab)).toList();
+
+    if (tab == JobTab.recommended) {
+      jobs.sort((a, b) => (b.matchScore ?? 0).compareTo(a.matchScore ?? 0));
+    } else {
+      jobs.sort((a, b) => (b.postedAt ?? DateTime(0)).compareTo(a.postedAt ?? DateTime(0)));
+    }
+    return jobs;
+  });
+});
+
+bool _matchesTab(JobModel job, JobTab tab) {
+  switch (tab) {
+    case JobTab.remote:
+      return job.isRemote;
+    case JobTab.fullTime:
+    case JobTab.partTime:
+    case JobTab.internship:
+      return job.jobType == _employmentTypeFor(tab);
+    case JobTab.recommended:
+    case JobTab.latest:
+      return true;
+  }
+}
 
 String? _employmentTypeFor(JobTab tab) {
   switch (tab) {
