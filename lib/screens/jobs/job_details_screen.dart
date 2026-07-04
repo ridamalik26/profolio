@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/job_model.dart';
+import '../../core/utils/page_transitions.dart';
 import '../../providers/application_provider.dart';
 import '../../widgets/primary_button.dart';
 import 'apply_screen.dart';
@@ -161,10 +162,7 @@ class JobDetailsScreen extends ConsumerWidget {
           child: PrimaryButton(
             label: 'Apply Now',
             icon: Icons.send_outlined,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => ApplyScreen(job: job)),
-            ),
+            onPressed: () => pushSlideFade(context, ApplyScreen(job: job)),
           ),
         ),
       ),

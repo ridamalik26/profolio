@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/page_transitions.dart';
 import '../../providers/job_provider.dart';
+import '../../widgets/shimmer_box.dart';
 import 'job_details_screen.dart';
 import 'widgets/filter_sheet.dart';
 import 'widgets/job_card.dart';
@@ -159,11 +161,7 @@ class _JobsTabView extends ConsumerWidget {
     final jobsAsync = ref.watch(jobsForTabProvider(tab));
 
     return jobsAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppColors.bronze),
-        ),
-      ),
+      loading: () => const ShimmerCardList(itemCount: 6, itemHeight: 108),
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -217,10 +215,7 @@ class _JobsTabView extends ConsumerWidget {
               final job = jobs[i];
               return JobCard(
                 job: job,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => JobDetailsScreen(job: job)),
-                ),
+                onTap: () => pushSlideFade(context, JobDetailsScreen(job: job)),
               );
             },
           ),

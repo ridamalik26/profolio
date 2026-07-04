@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/job_model.dart';
+import '../models/notification_model.dart';
 import '../services/gemini_job_service.dart';
+import 'auth_provider.dart';
+import 'notification_provider.dart';
 import 'profile_provider.dart';
+import 'settings_provider.dart';
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
@@ -163,3 +167,64 @@ String? _employmentTypeFor(JobTab tab) {
       return null;
   }
 }
+
+// ── Job alert / recommendation notifications ────────────────────────────────
+//
+// Fires at most one "job_alert" (skill match) and one "recommendation"
+// (high match score) notification per jobsRawProvider fetch — i.e. once per
+// search/refresh, not per tab switch. Watch this provider once near app start
+// (HomeScreen) so the listener is registered for the whole session.
+
+final jobAlertWatcherProvider = Provider.autoDispose<void>((ref) {
+  ref.listen<AsyncValue<List<JobModel>>>(jobsRawProvider, (_, next) async {
+    final jobs = next.value;
+    if (jobs == null || jobs.isEmpty) return;
+
+    final uid = ref.read(authStateChangesProvider).value?.id;
+    if (uid == null) return;
+
+    final prefs = ref.read(accountSettingsProvider).value?.notificationPrefs;
+    final skills = ref
+            .read(profileProvider)
+            .value
+            ?.skills
+            .map((s) => s.toLowerCase())
+            .toSet() ??
+        {};
+    final notificationService = ref.read(notificationServiceProvider);
+
+    if ((prefs?.jobAlerts ?? true) && skills.isNotEmpty) {
+      for (final job in jobs) {
+        final matchesSkill = job.requiredSkills
+            .any((s) => skills.contains(s.toLowerCase()));
+        if (matchesSkill) {
+          await notificationService.notify(
+            uid: uid,
+            title: 'New job alert matching your skills',
+            body: '${job.title} at ${job.company} looks like a fit for you.',
+            type: NotificationType.jobAlert,
+          );
+          break;
+        }
+      }
+    }
+
+    if (prefs?.recommendations ?? true) {
+      JobModel? best;
+      for (final job in jobs) {
+        if (job.matchScore == null) continue;
+        if (best == null || job.matchScore! > (best.matchScore ?? 0)) best = job;
+      }
+      if (best != null && (best.matchScore ?? 0) >= 85) {
+        await notificationService.notify(
+          uid: uid,
+          title: 'Recommended for you',
+          body: '${best.title} at ${best.company} is a ${best.matchScore}% match.',
+          type: NotificationType.recommendation,
+        );
+      }
+    }
+
+    ref.invalidate(notificationsProvider);
+  });
+});

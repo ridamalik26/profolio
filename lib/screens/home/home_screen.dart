@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/page_transitions.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/job_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../jobs/jobs_screen.dart';
+import '../notifications/notification_center_screen.dart';
 import '../profile/profile_screen.dart';
 import '../resume/resume_screen.dart';
+import '../settings/settings_screen.dart';
 import '../tracking/application_tracking_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -16,7 +21,11 @@ class HomeScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final authState = ref.watch(authNotifierProvider);
     final profileAsync = ref.watch(profileProvider);
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
     final theme = Theme.of(context);
+
+    // Registers the job-alert/recommendation listener for the app session.
+    ref.watch(jobAlertWatcherProvider);
 
     final displayName = profileAsync.value?.fullName.isNotEmpty == true
         ? profileAsync.value!.fullName
@@ -52,12 +61,46 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_none, color: AppColors.navy),
+                onPressed: () =>
+                    pushSlideFade(context, const NotificationCenterScreen()),
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16),
+                    child: Text(
+                      unreadCount > 9 ? '9+' : '$unreadCount',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: AppColors.navy),
+            onPressed: () => pushSlideFade(context, const SettingsScreen()),
+          ),
+          const SizedBox(width: 4),
           // Profile avatar → opens profile screen
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            ),
+            onTap: () => pushSlideFade(context, const ProfileScreen()),
             child: CircleAvatar(
               backgroundColor: AppColors.bronze.withValues(alpha: 0.15),
               radius: 18,
@@ -189,37 +232,25 @@ class HomeScreen extends ConsumerWidget {
         Icons.person_outline,
         'My Profile',
         'View & edit profile',
-        () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            ),
+        () => pushSlideFade(context, const ProfileScreen()),
       ),
       (
         Icons.description_outlined,
         'My Resume',
         'Upload & manage',
-        () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ResumeScreen()),
-            ),
+        () => pushSlideFade(context, const ResumeScreen()),
       ),
       (
         Icons.work_outline,
         'Find Jobs',
         'AI-matched listings',
-        () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const JobsScreen()),
-            ),
+        () => pushSlideFade(context, const JobsScreen()),
       ),
       (
         Icons.checklist_outlined,
         'My Applications',
         'Track your progress',
-        () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ApplicationTrackingScreen()),
-            ),
+        () => pushSlideFade(context, const ApplicationTrackingScreen()),
       ),
     ];
 

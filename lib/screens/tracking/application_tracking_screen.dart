@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/application_model.dart';
+import '../../models/notification_model.dart';
 import '../../providers/application_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../providers/settings_provider.dart';
+import '../../widgets/shimmer_box.dart';
 import 'widgets/application_card.dart';
 
 class ApplicationTrackingScreen extends StatelessWidget {
@@ -58,12 +62,11 @@ class _ApplicationsList extends ConsumerWidget {
     final applicationsAsync = ref.watch(applicationsProvider);
 
     return applicationsAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppColors.bronze),
-        ),
+      loading: () => const ShimmerCardList(itemCount: 4, itemHeight: 110),
+      error: (e, _) => _ErrorState(
+        message: 'Could not load applications. Please try again.',
+        onRetry: () => ref.invalidate(applicationsProvider),
       ),
-      error: (e, _) => Center(child: Text(e.toString())),
       data: (applications) {
         final filtered = applications.where((a) => a.status == status).toList();
         if (filtered.isEmpty) {
@@ -85,6 +88,21 @@ class _ApplicationsList extends ConsumerWidget {
                       .read(applicationServiceProvider)
                       .updateStatus(app.id, newStatus);
                   ref.invalidate(applicationsProvider);
+
+                  final uid = ref.read(authStateChangesProvider).value?.id;
+                  final wantsStatusUpdates =
+                      ref.read(accountSettingsProvider).value?.notificationPrefs.statusUpdates ??
+                          true;
+                  if (uid != null && wantsStatusUpdates) {
+                    await ref.read(notificationServiceProvider).notify(
+                          uid: uid,
+                          title: 'Application status updated',
+                          body:
+                              'Your application for ${app.jobTitle} at ${app.companyName} is now ${newStatus.name}.',
+                          type: NotificationType.statusUpdate,
+                        );
+                    ref.invalidate(notificationsProvider);
+                  }
                 },
               );
             },
@@ -103,12 +121,11 @@ class _SavedJobsList extends ConsumerWidget {
     final savedAsync = ref.watch(savedJobsProvider);
 
     return savedAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppColors.bronze),
-        ),
+      loading: () => const ShimmerCardList(itemCount: 4, itemHeight: 90),
+      error: (e, _) => _ErrorState(
+        message: 'Could not load saved jobs. Please try again.',
+        onRetry: () => ref.invalidate(savedJobsProvider),
       ),
-      error: (e, _) => Center(child: Text(e.toString())),
       data: (saved) {
         if (saved.isEmpty) {
           return const _EmptyState(message: 'No saved jobs yet.');
@@ -166,6 +183,35 @@ class _SavedJobsList extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.error, size: 32),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
     );
   }
 }

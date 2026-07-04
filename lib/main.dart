@@ -8,6 +8,7 @@ import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,12 @@ void main() async {
     url: dotenv.get('SUPABASE_URL'),
     anonKey: dotenv.get('SUPABASE_ANON_KEY'),
   );
+
+  // Non-fatal: the app still works if the platform denies/lacks notification
+  // support — notification history is still recorded in Supabase either way.
+  try {
+    await NotificationService().initLocalNotifications();
+  } catch (_) {}
 
   runApp(const ProviderScope(child: ProFolioApp()));
 }

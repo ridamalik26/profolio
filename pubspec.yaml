@@ -32,12 +32,33 @@ dependencies:
   flutter_dotenv: ^6.0.1
   google_generative_ai: ^0.4.7
 
+  # Notifications
+  flutter_local_notifications: ^18.0.1
+
+  # Loading skeletons
+  shimmer: ^3.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.3
 
 flutter:
   uses-material-design: true
   assets:
     - .env
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#F5F1E8"
+  image: assets/splash/splash_logo.png
+  android_12:
+    color: "#F5F1E8"
+    image: assets/splash/splash_logo.png
